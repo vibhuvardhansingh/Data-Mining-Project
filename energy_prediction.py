@@ -83,10 +83,10 @@ def dnn(X_train, X_test, Y):
     model.add(Dense(1, activation='relu'))
     #model.summary()
     model.compile(loss='binary_crossentropy', optimizer="adam", metrics=['accuracy'])
-    model.fit(np.array(X_scale), np.array(y), epochs=100, batch_size=10, verbose=1)
-    loss,accuracy =model.evaluate(np.array(X_scale), np.array(y))
+    model.fit(np.array(x_scale[:200]), np.array(y[:200]), epochs=100, batch_size=10, verbose=1)
+    loss,accuracy =model.evaluate(np.array(x_scale[:200]), np.array(y[:200]))
     print(loss, accuracy*100)
-    result=model.predict_classes(np.array(X_scale_test))
+    result=model.predict_classes(np.array(X_scale_test[:200]))
     #result= pd.Dataframe(dnn_predict, columns=['dnn prediction'])
     return result
 
@@ -216,7 +216,7 @@ if __name__ == "__main__":
     FE_predict = reg_FE(X_scale, X_scale_test, yf, ye)
     Ehull_vs_Foreng(ye, yf)
     ehull_pred(ye_test.to_numpy(), EaH_predict['predicted Energy above hull'].to_numpy())
-    confusion_matrix_result, accuracy, precision, recall, f1_score_result  = evaluation_metrics(clf_result,y_test)
+    confusion_matrix_result, accuracy, precision, recall, f1_score_result  = evaluation_metrics(dnn_result,y_test)
     output = 'energy_prediction_result.xlsx'
     write_result(testfile, output, clf_result, EaH_predict, FE_predict)
     
