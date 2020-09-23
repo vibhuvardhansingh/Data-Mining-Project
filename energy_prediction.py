@@ -130,6 +130,12 @@ def evaluation_metrics(y_pred, y_test):
     f1_score_result = f1_score(y_pred,y_test)
     
     return confusion_matrix_result, accuracy, precision, recall, f1_score_result
+
+def feature_selection(X_train, Y_train):
+    model = ExtraTreesClassifier()
+    model.fit(X_train, Y_train)
+    importance = model.feature_importances_
+    return importance
     
 
 
@@ -140,9 +146,7 @@ if __name__ == "__main__":
     id = 0 if len(sys.argv)<=3 else sys.argv[3]
 
     X_scale, X_scale_test, y, ye, yf, y_test, ye_test, yf_test, Xc, Xd = wrap_data()
-    ''' model = ExtraTreesClassifier()
-    model.fit(X_scale, y)
-    importance = model.feature_importances_'''
+    importance = feature_selection(X_scale, y)
     clf_result = classification(X_scale, X_scale_test, y)
     EaH_predict = reg_EaH(X_scale, X_scale_test, ye)
     FE_predict = reg_FE(X_scale, X_scale_test, yf, ye)
