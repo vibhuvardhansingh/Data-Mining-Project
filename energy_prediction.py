@@ -9,6 +9,8 @@ from sklearn.metrics import confusion_matrix, accuracy_score, precision_score, f
 import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
 
+from keras.models import Sequential                    #
+from keras.layers import Dense, Activation, Dropout    #
 
 def read_data(cont_name, disc_name):
     cdata = pd.read_csv(cont_name, index_col=0)
@@ -52,6 +54,13 @@ def select_features(index_file, select_n, X_total):
     X_features = X_total.iloc[:, selected]
     return X_features
 
+def data_conv(X_scale, X_scale_test, y):
+    x_train=X_scale.values.tolist()             #
+    x_test=X_scale_test.values.tolist()         #
+    y0=y.values.tolist()                        #
+    y1= [int(i) for i in y0]
+    return x_train, x_test, y1
+
 def classification(X_scale, X_scale_test, y):
     clf = ExtraTreesClassifier(criterion='entropy', bootstrap=False, max_leaf_nodes=None,
                                min_impurity_split=0.1, max_features=43, class_weight='balanced',
@@ -63,6 +72,23 @@ def classification(X_scale, X_scale_test, y):
     stability_predict = clf.predict(X_features_test1)
     clf_result = pd.DataFrame(stability_predict, columns=['predicted stability'])
     return clf_result
+
+def dnn(X_train, X_test, Y):
+    x_scale, X_scale_test, y = data_conv(X_train, X_test, Y)
+    model= Sequential()
+    model.add(Dense(128, input_shape=(791,), activation='relu'))
+    model.add(Dropout(0.5))
+    model.add(Dense(64, activation='relu'))
+    model.add(Dropout(0.5))
+    model.add(Dense(1, activation='relu'))
+    #model.summary()
+    model.compile(loss='binary_crossentropy', optimizer="adam", metrics=['accuracy'])
+    model.fit(np.array(X_scale), np.array(y), epochs=100, batch_size=10, verbose=1)
+    loss,accuracy =model.evaluate(np.array(X_scale), np.array(y))
+    print(loss, accuracy*100)
+    result=model.predict_classes(np.array(X_scale_test))
+    #result= pd.Dataframe(dnn_predict, columns=['dnn prediction'])
+    return result
 
 def cut_highEs(X_features, yl, ye):
     # remove outliers
@@ -184,7 +210,8 @@ if __name__ == "__main__":
 
     X_scale, X_scale_test, y, ye, yf, y_test, ye_test, yf_test, Xc, Xd = wrap_data()
     importance = feature_selection(X_scale, y)
-    clf_result = classification(X_scale, X_scale_test, y)
+    clf_result = classification(X_scale, X_scale_test, y)                        
+    dnn_result=dnn(X_scale, X_scale_test, y)      #
     EaH_predict = reg_EaH(X_scale, X_scale_test, ye)
     FE_predict = reg_FE(X_scale, X_scale_test, yf, ye)
     Ehull_vs_Foreng(ye, yf)
