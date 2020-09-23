@@ -10,6 +10,6 @@
 
 # Specifications
 
-## Property predicted for the perovskites materials provided in the reference papers is regarding its stability and we are aiming to use the same data for the prediction of various different properties(ex. their ability to generate Hydrogen gas).
+### Property predicted for the perovskites materials provided in the reference papers is regarding its stability and we are aiming to use the same data for the prediction of various different properties(ex. their ability to generate Hydrogen gas).
 
 # Milestones
