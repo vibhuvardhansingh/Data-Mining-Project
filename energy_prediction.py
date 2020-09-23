@@ -5,9 +5,9 @@ from sklearn.kernel_ridge import KernelRidge
 from sklearn.ensemble import ExtraTreesClassifier
 from sklearn.feature_selection import VarianceThreshold
 from sklearn import preprocessing
-from sklearn.ensemble import ExtraTreesClassifier
 from sklearn.metrics import confusion_matrix, accuracy_score, precision_score, f1_score, recall_score
-
+import matplotlib.pyplot as plt
+from sklearn.cluster import KMeans
 
 
 def read_data(cont_name, disc_name):
@@ -137,6 +137,43 @@ def feature_selection(X_train, Y_train):
     importance = model.feature_importances_
     return importance
     
+def Ehull_vs_Foreng(Ehull, Form_eng):
+    df = pd.DataFrame({
+    'x':Ehull,
+    'y':Form_eng})
+    kmeans = KMeans(n_clusters=5)
+    kmeans.fit(df)
+
+    labels = kmeans.predict(df)
+    centroids = kmeans.cluster_centers_
+
+
+    plt.figure(figsize=(15, 5))
+
+    colmap = {1: 'r', 2: 'g', 3: 'b',4: 'y', 5: 'w'}
+
+    colors = list(map(lambda x: colmap[x+1], labels))
+
+    plt.scatter(df['x'], df['y'], color=colors, alpha=0.5, edgecolor='k')
+    for idx, centroid in enumerate(centroids):
+        plt.scatter(*centroid, color=colmap[idx+1])
+    
+    plt.title('K-means clustering algorithm')
+    plt.xlabel('Ehull')
+    plt.ylabel('Formation Energy')
+
+    plt.show()
+    
+def ehull_pred(train, pred):
+    df = pd.DataFrame({
+    'x':train,
+    'y':pred})
+
+    plt.figure(figsize=(5, 5))
+    plt.scatter(df['x'],df['y'])
+
+    plt.show()
+
 
 
 if __name__ == "__main__":
@@ -150,9 +187,14 @@ if __name__ == "__main__":
     clf_result = classification(X_scale, X_scale_test, y)
     EaH_predict = reg_EaH(X_scale, X_scale_test, ye)
     FE_predict = reg_FE(X_scale, X_scale_test, yf, ye)
+    Ehull_vs_Foreng(ye, yf)
+    ehull_pred(ye_test.to_numpy(), EaH_predict['predicted Energy above hull'].to_numpy())
     confusion_matrix_result, accuracy, precision, recall, f1_score_result  = evaluation_metrics(clf_result,y_test)
     output = 'energy_prediction_result.xlsx'
     write_result(testfile, output, clf_result, EaH_predict, FE_predict)
+    
+
+
 
 
 

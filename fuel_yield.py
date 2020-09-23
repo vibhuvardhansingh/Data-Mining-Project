@@ -3,6 +3,8 @@
 import pandas as pd
 from sklearn.linear_model import LinearRegression
 import matplotlib.pyplot as plt
+from sklearn.cluster import KMeans
+
 
 
 data = pd.read_excel('Fuel_yield.xlsx') 
@@ -15,7 +17,6 @@ Y = data['predicted Energy above hull'].values.reshape(-1,1)
 x = data['Fuel yield μmol per g per cycle']
 y = data['predicted Energy above hull']
 
-from sklearn.cluster import KMeans
 
 df = pd.DataFrame({
     'x':x,
