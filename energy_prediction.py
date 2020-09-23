@@ -121,6 +121,17 @@ def wrap_data():
 
     return X_scale, X_scale_test, y, ye, yf, y_test, ye_test, yf_test, Xc, Xd
 
+def evaluation_metrics(y_pred, y_test):
+    
+    confusion_matrix_result = confusion_matrix(y_pred,y_test)
+    accuracy = accuracy_score(y_pred,y_test)
+    precision = precision_score(y_pred,y_test)
+    recall = recall_score(y_pred,y_test)
+    f1_score_result = f1_score(y_pred,y_test)
+    
+    return confusion_matrix_result, accuracy, precision, recall, f1_score_result
+    
+
 
 if __name__ == "__main__":
 
@@ -135,11 +146,7 @@ if __name__ == "__main__":
     clf_result = classification(X_scale, X_scale_test, y)
     EaH_predict = reg_EaH(X_scale, X_scale_test, ye)
     FE_predict = reg_FE(X_scale, X_scale_test, yf, ye)
-    confusion_matrix = confusion_matrix(clf_result,y_test)
-    accuracy = accuracy_score(clf_result,y_test)
-    precision = precision_score(clf_result,y_test)
-    recall = recall_score(clf_result,y_test)
-    f1_score = f1_score(clf_result,y_test)
+    confusion_matrix_result, accuracy, precision, recall, f1_score_result  = evaluation_metrics(clf_result,y_test)
     output = 'energy_prediction_result.xlsx'
     write_result(testfile, output, clf_result, EaH_predict, FE_predict)
 
