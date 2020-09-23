@@ -6,6 +6,8 @@ from sklearn.ensemble import ExtraTreesClassifier
 from sklearn.feature_selection import VarianceThreshold
 from sklearn import preprocessing
 from sklearn.ensemble import ExtraTreesClassifier
+from sklearn.metrics import confusion_matrix, accuracy_score, precision_score, f1_score, recall_score
+
 
 
 def read_data(cont_name, disc_name):
@@ -133,7 +135,12 @@ if __name__ == "__main__":
     clf_result = classification(X_scale, X_scale_test, y)
     EaH_predict = reg_EaH(X_scale, X_scale_test, ye)
     FE_predict = reg_FE(X_scale, X_scale_test, yf, ye)
-    output = 'prediction_result.xlsx'
+    confusion_matrix = confusion_matrix(clf_result,y_test)
+    accuracy = accuracy_score(clf_result,y_test)
+    precision = precision_score(clf_result,y_test)
+    recall = recall_score(clf_result,y_test)
+    f1_score = f1_score(clf_result,y_test)
+    output = 'energy_prediction_result.xlsx'
     write_result(testfile, output, clf_result, EaH_predict, FE_predict)
 
 
