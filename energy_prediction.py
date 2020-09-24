@@ -63,7 +63,7 @@ def data_conv(X_scale, X_scale_test, y):
 
 def classification(X_scale, X_scale_test, y):
     clf = ExtraTreesClassifier(criterion='entropy', bootstrap=False, max_leaf_nodes=None,
-                               min_impurity_split=0.1, max_features=43, class_weight='balanced',
+                               max_features=43, class_weight='balanced', # min_impurity_split=0.1 is removed
                                min_samples_split=5, min_samples_leaf=1, max_depth=18, n_estimators=115)
     X_features1 = select_features('RFE_clf_indices.txt', 70, X_scale)
     X_features_test1 = select_features('RFE_clf_indices.txt', 70, X_scale_test)
@@ -157,11 +157,14 @@ def evaluation_metrics(y_pred, y_test):
     
     return confusion_matrix_result, accuracy, precision, recall, f1_score_result
 
-def feature_selection(X_train, Y_train):
+def feature_selection(X_train, Y_train, no_of_features):
     model = ExtraTreesClassifier()
     model.fit(X_train, Y_train)
     importance = model.feature_importances_
-    return importance
+    importance_matrics = pd.DataFrame({'features':X_train.columns, 'importance':importance})
+    importance_matrics = importance_matrics.sort_values(by='importance', ascending = False)
+    features = np.array((importance_matrics[:no_of_features]['features'].index).tolist())
+    return X_train.iloc[:,features]
     
 def Ehull_vs_Foreng(Ehull, Form_eng):
     df = pd.DataFrame({
@@ -209,7 +212,7 @@ if __name__ == "__main__":
     id = 0 if len(sys.argv)<=3 else sys.argv[3]
 
     X_scale, X_scale_test, y, ye, yf, y_test, ye_test, yf_test, Xc, Xd = wrap_data()
-    importance = feature_selection(X_scale, y)
+    importance_matrics = feature_selection(X_scale, y, 25)
     clf_result = classification(X_scale, X_scale_test, y)                        
     dnn_result=dnn(X_scale, X_scale_test, y)      #
     EaH_predict = reg_EaH(X_scale, X_scale_test, ye)
