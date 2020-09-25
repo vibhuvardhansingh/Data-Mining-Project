@@ -8,6 +8,7 @@ from sklearn import preprocessing
 from sklearn.metrics import confusion_matrix, accuracy_score, precision_score, f1_score, recall_score
 import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
+from mpl_toolkits import mplot3d
 
 from keras.models import Sequential                    #
 from keras.layers import Dense, Activation, Dropout    #
@@ -73,22 +74,22 @@ def classification(X_scale, X_scale_test, y):
     clf_result = pd.DataFrame(stability_predict, columns=['predicted stability'])
     return clf_result
 
-def dnn(X_train, X_test, Y):
+def dnn(X_train, X_test, Y, train_data):
     x_scale, X_scale_test, y = data_conv(X_train, X_test, Y)
     model= Sequential()
-    model.add(Dense(128, input_shape=(len(x_scale[1]),), activation='relu'))
+    model.add(Dense(128, input_shape=(len(X_train.columns),), activation='relu'))
     model.add(Dropout(0.5))
     model.add(Dense(64, activation='relu'))
     model.add(Dropout(0.5))
     model.add(Dense(1, activation='relu'))
     #model.summary()
     model.compile(loss='binary_crossentropy', optimizer="adam", metrics=['accuracy'])
-    model.fit(np.array(x_scale[:200]), np.array(y[:200]), epochs=100, batch_size=10, verbose=1)
-    loss,accuracy =model.evaluate(np.array(x_scale[:200]), np.array(y[:200]))
+    model.fit(np.array(x_scale[:train_data]), np.array(y[:train_data]), epochs=100, batch_size=10, verbose=1)
+    loss,accuracy =model.evaluate(np.array(x_scale[:train_data]), np.array(y[:train_data]))
     print(loss, accuracy*100)
-    result=model.predict_classes(np.array(X_scale_test[:200]))
+    result=model.predict_classes(np.array(X_scale_test[:train_data]))
     #result= pd.Dataframe(dnn_predict, columns=['dnn prediction'])
-    return result
+    return result, accuracy
 
 def cut_highEs(X_features, yl, ye):
     # remove outliers
@@ -165,6 +166,34 @@ def feature_selection(X_train, Y_train,X_test, no_of_features):
     importance_matrics = importance_matrics.sort_values(by='importance', ascending = False)
     features = np.array((importance_matrics[:no_of_features]['features'].index).tolist())
     return X_train.iloc[:,features], X_test.iloc[:,features]
+
+def feature_vs_acc(X_train, X_test, y, y_test, no_of_units):
+    X = []
+    Y = []
+    Z = []
+    j = [10,20,30,40,50,60,70,80,90,100]
+    for i in j:
+        importance_x, importance_x_test = feature_selection(X_train, y,X_test, i)
+        result, model_accuracy = dnn(importance_x, importance_x_test, y, no_of_units)
+        confusion_matrix_result, accuracy, precision, recall, f1_score_result  = evaluation_metrics(result,y_test)
+        X.append(i)
+        Y.append(model_accuracy)
+        Z.append(accuracy)
+        
+    df = pd.DataFrame({
+        'x':X,
+        'y':Y,
+        'z':Z})
+    
+    ax = plt.axes(projection='3d')
+    ax.scatter3D(df['x'], df['y'], df['z']);
+
+
+    #plt.plot(df['x'],df['y'])
+    #plt.plot(df['x'],df['z'])
+
+    return 
+    
     
 def Ehull_vs_Foreng(Ehull, Form_eng):
     df = pd.DataFrame({
@@ -212,17 +241,18 @@ if __name__ == "__main__":
     id = 0 if len(sys.argv)<=3 else sys.argv[3]
 
     X_scale, X_scale_test, y, ye, yf, y_test, ye_test, yf_test, Xc, Xd = wrap_data()
-    importance_matrics, importance_matrics_test = feature_selection(X_scale, y,X_scale_test, 25)
+    importance_matrics, importance_matrics_test = feature_selection(X_scale, y,X_scale_test, 40)
     clf_result = classification(X_scale, X_scale_test, y)                        
     #dnn_result=dnn(X_scale, X_scale_test, y)      #
-    dnn_result=dnn(importance_matrics, importance_matrics_test, y)
+    feature_vs_acc(X_scale, X_scale_test, y, y_test, 200)
+    dnn_result, model_accuracy=dnn(importance_matrics, importance_matrics_test, y, 200)
     EaH_predict = reg_EaH(X_scale, X_scale_test, ye)
     FE_predict = reg_FE(X_scale, X_scale_test, yf, ye)
     Ehull_vs_Foreng(ye, yf)
     ehull_pred(ye_test.to_numpy(), EaH_predict['predicted Energy above hull'].to_numpy())
     confusion_matrix_result, accuracy, precision, recall, f1_score_result  = evaluation_metrics(dnn_result,y_test)
     output = 'energy_prediction_result.xlsx'
-    write_result(testfile, output, clf_result, EaH_predict, FE_predict)
+    #write_result(testfile, output, clf_result, EaH_predict, FE_predict)
     
 
 
