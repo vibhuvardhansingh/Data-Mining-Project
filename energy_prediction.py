@@ -76,7 +76,7 @@ def classification(X_scale, X_scale_test, y):
 def dnn(X_train, X_test, Y):
     x_scale, X_scale_test, y = data_conv(X_train, X_test, Y)
     model= Sequential()
-    model.add(Dense(128, input_shape=(791,), activation='relu'))
+    model.add(Dense(128, input_shape=(len(x_scale[1]),), activation='relu'))
     model.add(Dropout(0.5))
     model.add(Dense(64, activation='relu'))
     model.add(Dropout(0.5))
@@ -157,14 +157,14 @@ def evaluation_metrics(y_pred, y_test):
     
     return confusion_matrix_result, accuracy, precision, recall, f1_score_result
 
-def feature_selection(X_train, Y_train, no_of_features):
+def feature_selection(X_train, Y_train,X_test, no_of_features):
     model = ExtraTreesClassifier()
     model.fit(X_train, Y_train)
     importance = model.feature_importances_
     importance_matrics = pd.DataFrame({'features':X_train.columns, 'importance':importance})
     importance_matrics = importance_matrics.sort_values(by='importance', ascending = False)
     features = np.array((importance_matrics[:no_of_features]['features'].index).tolist())
-    return X_train.iloc[:,features]
+    return X_train.iloc[:,features], X_test.iloc[:,features]
     
 def Ehull_vs_Foreng(Ehull, Form_eng):
     df = pd.DataFrame({
@@ -212,9 +212,10 @@ if __name__ == "__main__":
     id = 0 if len(sys.argv)<=3 else sys.argv[3]
 
     X_scale, X_scale_test, y, ye, yf, y_test, ye_test, yf_test, Xc, Xd = wrap_data()
-    importance_matrics = feature_selection(X_scale, y, 25)
+    importance_matrics, importance_matrics_test = feature_selection(X_scale, y,X_scale_test, 25)
     clf_result = classification(X_scale, X_scale_test, y)                        
-    dnn_result=dnn(X_scale, X_scale_test, y)      #
+    #dnn_result=dnn(X_scale, X_scale_test, y)      #
+    dnn_result=dnn(importance_matrics, importance_matrics_test, y)
     EaH_predict = reg_EaH(X_scale, X_scale_test, ye)
     FE_predict = reg_FE(X_scale, X_scale_test, yf, ye)
     Ehull_vs_Foreng(ye, yf)
