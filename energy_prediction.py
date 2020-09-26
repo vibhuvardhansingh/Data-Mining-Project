@@ -1,17 +1,14 @@
 import numpy as np
 import pandas as pd
-import sys
-from sklearn.kernel_ridge import KernelRidge
 from sklearn.ensemble import ExtraTreesClassifier
 from sklearn.feature_selection import VarianceThreshold
 from sklearn import preprocessing
 from sklearn.metrics import confusion_matrix, accuracy_score, precision_score, f1_score, recall_score
 import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
-from mpl_toolkits import mplot3d
 
 from keras.models import Sequential                    #
-from keras.layers import Dense, Activation, Dropout    #
+from keras.layers import Dense, Dropout    #
 
 def read_data(cont_name, disc_name):
     cdata = pd.read_csv(cont_name, index_col=0)
@@ -45,16 +42,6 @@ def data_scale(X_total, X_total_model):
     X_scaled = scaler.transform(X_total)
     return pd.DataFrame(X_scaled,columns=feature_names)
 
-def select_features(index_file, select_n, X_total):
-    indices_data = pd.read_csv(index_file, names=['order'])
-    ''' b = indices_data.sort_values(by = ['order'])'''
-    indices = np.array(indices_data['order'].tolist())
-    ''' v = indices.copy()
-    v = v.sort()'''
-    selected = indices[:select_n]
-    X_features = X_total.iloc[:, selected]
-    return X_features
-
 def data_conv(X_scale, X_scale_test, y):
     x_train=X_scale.values.tolist()             #
     x_test=X_scale_test.values.tolist()         #
@@ -62,17 +49,6 @@ def data_conv(X_scale, X_scale_test, y):
     y1= [int(i) for i in y0]
     return x_train, x_test, y1
 
-def classification(X_scale, X_scale_test, y):
-    clf = ExtraTreesClassifier(criterion='entropy', bootstrap=False, max_leaf_nodes=None,
-                               max_features=43, class_weight='balanced', # min_impurity_split=0.1 is removed
-                               min_samples_split=5, min_samples_leaf=1, max_depth=18, n_estimators=115)
-    X_features1 = select_features('RFE_clf_indices.txt', 70, X_scale)
-    X_features_test1 = select_features('RFE_clf_indices.txt', 70, X_scale_test)
-
-    clf.fit(X_features1, y)
-    stability_predict = clf.predict(X_features_test1)
-    clf_result = pd.DataFrame(stability_predict, columns=['predicted stability'])
-    return clf_result
 
 def dnn(X_train, X_test, Y, train_data):
     x_scale, X_scale_test, y = data_conv(X_train, X_test, Y)
@@ -96,36 +72,6 @@ def cut_highEs(X_features, yl, ye):
     X_s = X_features.loc[ye < 400]
     yl_s = yl[ye < 400]
     return X_s, yl_s
-
-def reg_EaH(X_scale, X_scale_test, ye):
-    reg = KernelRidge(kernel='rbf', alpha=0.007, gamma=0.007)
-    X_features2 = select_features('RFE_eah_indices.txt', 70, X_scale)
-    X_features_test2 = select_features('RFE_eah_indices.txt', 70, X_scale_test)
-
-    X_s, ye_s = cut_highEs(X_features2, ye, ye)
-    reg.fit(X_s, ye_s)
-    y_predict = reg.predict(X_features_test2)
-    EaH_predict = pd.DataFrame(y_predict, columns=['predicted Energy above hull'])
-    return EaH_predict
-
-
-def reg_FE(X_scale, X_scale_test, yf, ye):
-    reg = KernelRidge(kernel='rbf', alpha=0.00464, gamma=0.0215)
-    X_features3 = select_features('stability_fe_indices.txt', 20, X_scale)
-    X_features_test3 = select_features('stability_fe_indices.txt', 20, X_scale_test)
-    X_s, yf_s = cut_highEs(X_features3, yf, ye)
-    reg.fit(X_s, yf_s)
-    y_predict = reg.predict(X_features_test3)
-    FE_predict = pd.DataFrame(y_predict, columns=['predicted Formation Energy'])
-    return FE_predict
-
-def write_result(testfile, output, clf_result, EaH_predict, FE_predict):
-    test_data = pd.read_excel(testfile)
-    raw_composition = test_data[['Material Composition', 'A site #1', 'A site #2',
-                                 'A site #3', 'B site #1', 'B site #2', 'B site #3',
-                                 'X site', 'Number of elements']]
-    result = pd.concat([raw_composition, clf_result, EaH_predict, FE_predict], axis=1)
-    result.to_excel(output, index=None)
 
 def wrap_data():
 
@@ -233,26 +179,14 @@ def ehull_pred(train, pred):
     plt.show()
 
 
-
 if __name__ == "__main__":
-
-    trainfile = 'perovskite_DFT_EaH_FormE.xlsx' if len(sys.argv)<=1 else sys.argv[1]
-    testfile = 'newCompound.xlsx' if len(sys.argv)<=2 else sys.argv[2]
-    id = 0 if len(sys.argv)<=3 else sys.argv[3]
 
     X_scale, X_scale_test, y, ye, yf, y_test, ye_test, yf_test, Xc, Xd = wrap_data()
     importance_matrics, importance_matrics_test = feature_selection(X_scale, y,X_scale_test, 40)
-    clf_result = classification(X_scale, X_scale_test, y)                        
-    #dnn_result=dnn(X_scale, X_scale_test, y)      #
     feature_vs_acc(X_scale, X_scale_test, y, y_test, 200)
     dnn_result, model_accuracy=dnn(importance_matrics, importance_matrics_test, y, 200)
-    EaH_predict = reg_EaH(X_scale, X_scale_test, ye)
-    FE_predict = reg_FE(X_scale, X_scale_test, yf, ye)
     Ehull_vs_Foreng(ye, yf)
-    ehull_pred(ye_test.to_numpy(), EaH_predict['predicted Energy above hull'].to_numpy())
     confusion_matrix_result, accuracy, precision, recall, f1_score_result  = evaluation_metrics(dnn_result,y_test)
-    output = 'energy_prediction_result.xlsx'
-    #write_result(testfile, output, clf_result, EaH_predict, FE_predict)
     
 
 
