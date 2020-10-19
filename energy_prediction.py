@@ -6,6 +6,11 @@ from sklearn import preprocessing
 from sklearn.metrics import confusion_matrix, accuracy_score, precision_score, f1_score, recall_score
 import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
+import skfuzzy as fuzz
+from fcmeans import FCM
+from seaborn import scatterplot as scatter
+
+
 
 from keras.models import Sequential                    #
 from keras.layers import Dense, Dropout    #
@@ -168,6 +173,60 @@ def Ehull_vs_Foreng(Ehull, Form_eng):
 
     plt.show()
     
+    
+def c_mean_cluster(Ehull, Form_eng):
+    z = pd.concat([Ehull,Form_eng],join = 'outer',axis = 1)
+
+    colors = ['b', 'orange', 'g', 'r', 'c', 'm', 'y', 'k', 'Brown', 'ForestGreen']
+
+
+    fig1, axes1 = plt.subplots(3, 3, figsize=(8, 8))
+    fpcs = []
+    
+
+    for ncenters, ax in enumerate(axes1.reshape(-1), 2):
+        cntr, u, u0, d, jm, p, fpc = fuzz.cluster.cmeans(z, ncenters, 2, error=0.005, maxiter=1000, init=None)
+
+        # Store fpc values for later
+        fpcs.append(fpc)
+
+        # Plot assigned clusters, for each data point in training set
+        cluster_membership = np.argmax(u, axis=0)
+        #for j in range(ncenters):
+            #ax.plot(Ehull[cluster_membership]==j, y=Form_eng[cluster_membership]==j, '.', color=colors[j])
+
+        # Mark the center of each fuzzy cluster
+        for pt in cntr:
+            ax.plot(pt[0], pt[1], 'rs')
+
+        ax.set_title('Centers = {0}; FPC = {1:.2f}'.format(ncenters, fpc))
+        ax.axis('off')
+    
+    fig2, ax2 = plt.subplots()
+    ax2.plot(np.r_[2:11], fpcs)
+    ax2.set_xlabel("Number of centers")
+    ax2.set_ylabel("Fuzzy partition coefficient")
+
+    fig1.tight_layout()
+    
+def c_mean_cluster_graph(Ehull, Form_eng):
+    df = pd.DataFrame({
+    'x':Ehull,
+    'y':Form_eng})
+    kmeans = KMeans(n_clusters=7)
+    kmeans.fit(df)
+
+    labels = kmeans.predict(df)
+    z = pd.concat([Ehull,Form_eng],join = 'outer',axis = 1)
+    fcm = FCM(n_clusters = 7)
+    fcm.fit(z)
+    fcm_labels  = fcm.u.argmax(axis=1)
+    f, axes = plt.subplots(1, 2, figsize=(11,5))
+    scatter(Ehull, Form_eng, ax=axes[0], hue = labels)
+    plt.title('fuzzy-c-means algorithm')
+    scatter(Ehull, Form_eng, ax=axes[1], hue=fcm_labels)
+    plt.show()
+    
 def ehull_pred(train, pred):
     df = pd.DataFrame({
     'x':train,
@@ -182,11 +241,13 @@ def ehull_pred(train, pred):
 if __name__ == "__main__":
 
     X_scale, X_scale_test, y, ye, yf, y_test, ye_test, yf_test, Xc, Xd = wrap_data()
-    importance_matrics, importance_matrics_test = feature_selection(X_scale, y,X_scale_test, 40)
-    feature_vs_acc(X_scale, X_scale_test, y, y_test, 200)
-    dnn_result, model_accuracy=dnn(importance_matrics, importance_matrics_test, y, 200)
+    #importance_matrics, importance_matrics_test = feature_selection(X_scale, y,X_scale_test, 40)
+    #feature_vs_acc(X_scale, X_scale_test, y, y_test, 200)
+    #dnn_result, model_accuracy=dnn(importance_matrics, importance_matrics_test, y, 200)
     Ehull_vs_Foreng(ye, yf)
-    confusion_matrix_result, accuracy, precision, recall, f1_score_result  = evaluation_metrics(dnn_result,y_test)
+    c_mean_cluster(ye, yf)
+    c_mean_cluster_graph(ye,yf)
+    #confusion_matrix_result, accuracy, precision, recall, f1_score_result  = evaluation_metrics(dnn_result,y_test)
     
 
 
