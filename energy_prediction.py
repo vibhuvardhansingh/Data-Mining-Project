@@ -12,8 +12,8 @@ from seaborn import scatterplot as scatter
 
 
 
-from keras.models import Sequential                    #
-from keras.layers import Dense, Dropout    #
+from keras.models import Sequential#, LSTM                #
+from keras.layers import Dense, Dropout, LSTM    #
 
 def read_data(cont_name, disc_name):
     cdata = pd.read_csv(cont_name, index_col=0)
@@ -236,14 +236,31 @@ def ehull_pred(train, pred):
     plt.scatter(df['x'],df['y'])
 
     plt.show()
+    
+def rnn_lstm(X_train, X_test, Y, train_data):
+    x_scale, X_scale_test, y = data_conv(X_train, X_test, Y)
+    model= Sequential()
+    model.add(LSTM(40, input_shape=(len(X_train.columns),1),activation='relu',return_sequences=False))
+    model.add(Dense(1, activation='sigmoid'))
+    model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+    a=np.array(x_scale[:train_data])
+    b=a[:,:,np.newaxis]
+    #print(b.shape)
+    
+    model.fit(b, np.array(y[:train_data]), epochs=15, batch_size=1000, verbose=1)
+    loss,accuracy =model.evaluate(b, np.array(y[:train_data]))
+    print(loss, accuracy*100)
 
 
 if __name__ == "__main__":
 
     X_scale, X_scale_test, y, ye, yf, y_test, ye_test, yf_test, Xc, Xd = wrap_data()
-    #importance_matrics, importance_matrics_test = feature_selection(X_scale, y,X_scale_test, 40)
-    #feature_vs_acc(X_scale, X_scale_test, y, y_test, 200)
-    #dnn_result, model_accuracy=dnn(importance_matrics, importance_matrics_test, y, 200)
+    no_of_features = 40
+    input_data = 250
+    importance_matrics, importance_matrics_test = feature_selection(X_scale, y,X_scale_test, no_of_features)
+    #feature_vs_acc(X_scale, X_scale_test, y, y_test, input_data)
+    #dnn_result, model_accuracy=dnn(importance_matrics, importance_matrics_test, y, input_data)
+    rnn_lstm(importance_matrics,importance_matrics_test,y,input_data)
     Ehull_vs_Foreng(ye, yf)
     c_mean_cluster(ye, yf)
     c_mean_cluster_graph(ye,yf)
