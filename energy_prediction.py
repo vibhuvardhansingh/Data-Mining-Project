@@ -9,10 +9,14 @@ from sklearn.cluster import KMeans
 import skfuzzy as fuzz
 from fcmeans import FCM
 from seaborn import scatterplot as scatter
+from sklearn import mixture
+import itertools
+from scipy import linalg
+import matplotlib as mpl
 
 
 
-from keras.models import Sequential#, LSTM                #
+from keras.models import Sequential              #
 from keras.layers import Dense, Dropout, LSTM    #
 
 def read_data(cont_name, disc_name):
@@ -175,7 +179,8 @@ def Ehull_vs_Foreng(Ehull, Form_eng):
     
     
 def c_mean_cluster(Ehull, Form_eng):
-    z = pd.concat([Ehull,Form_eng],join = 'outer',axis = 1)
+    #z = pd.concat([Ehull,Form_eng],join = 'outer',axis = 1)
+    alldata = np.vstack((Ehull, Form_eng))
 
     colors = ['b', 'orange', 'g', 'r', 'c', 'm', 'y', 'k', 'Brown', 'ForestGreen']
 
@@ -185,15 +190,15 @@ def c_mean_cluster(Ehull, Form_eng):
     
 
     for ncenters, ax in enumerate(axes1.reshape(-1), 2):
-        cntr, u, u0, d, jm, p, fpc = fuzz.cluster.cmeans(z, ncenters, 2, error=0.005, maxiter=1000, init=None)
+        cntr, u, u0, d, jm, p, fpc = fuzz.cluster.cmeans(alldata, ncenters, 2, error=0.005, maxiter=1000, init=None)
 
         # Store fpc values for later
         fpcs.append(fpc)
 
         # Plot assigned clusters, for each data point in training set
         cluster_membership = np.argmax(u, axis=0)
-        #for j in range(ncenters):
-            #ax.plot(Ehull[cluster_membership]==j, y=Form_eng[cluster_membership]==j, '.', color=colors[j])
+        for j in range(ncenters):
+            ax.plot(Ehull[cluster_membership == j], Form_eng[cluster_membership == j], '.', color=colors[j])
 
         # Mark the center of each fuzzy cluster
         for pt in cntr:
@@ -213,18 +218,85 @@ def c_mean_cluster_graph(Ehull, Form_eng):
     df = pd.DataFrame({
     'x':Ehull,
     'y':Form_eng})
-    kmeans = KMeans(n_clusters=7)
+    kmeans = KMeans(n_clusters=6)
     kmeans.fit(df)
 
     labels = kmeans.predict(df)
     z = pd.concat([Ehull,Form_eng],join = 'outer',axis = 1)
-    fcm = FCM(n_clusters = 7)
+    fcm = FCM(n_clusters = 6)
     fcm.fit(z)
     fcm_labels  = fcm.u.argmax(axis=1)
     f, axes = plt.subplots(1, 2, figsize=(11,5))
     scatter(Ehull, Form_eng, ax=axes[0], hue = labels)
     plt.title('fuzzy-c-means algorithm')
     scatter(Ehull, Form_eng, ax=axes[1], hue=fcm_labels)
+    plt.show()
+    
+def gmm_cluster(Ehull, Form_eng):
+    df = pd.DataFrame({
+    'x':Ehull,
+    'y':Form_eng})
+    lowest_bic = np.infty
+    bic = []
+    n_components_range = range(1, 11)
+    cv_types = ['spherical', 'tied', 'diag', 'full']
+    for cv_type in cv_types:
+        for n_components in n_components_range:
+            # Fit a Gaussian mixture with EM
+            gmm = mixture.GaussianMixture(n_components=n_components,
+                                          covariance_type=cv_type)
+            gmm.fit(df)
+            bic.append(gmm.bic(df))
+            if bic[-1] < lowest_bic:
+                lowest_bic = bic[-1]
+                best_gmm = gmm
+
+    bic = np.array(bic)
+    color_iter = itertools.cycle(['navy', 'turquoise', 'cornflowerblue',
+                              'darkorange'])
+    clf = best_gmm
+    bars = []
+    
+    # Plot the BIC scores
+    plt.figure(figsize=(8, 6))
+    spl = plt.subplot(2, 1, 1)
+    for i, (cv_type, color) in enumerate(zip(cv_types, color_iter)):
+        xpos = np.array(n_components_range) + .2 * (i - 2)
+        bars.append(plt.bar(xpos, bic[i * len(n_components_range):
+                                      (i + 1) * len(n_components_range)],
+                            width=.2, color=color))
+    plt.xticks(n_components_range)
+    plt.ylim([bic.min() * 1.01 - .01 * bic.max(), bic.max()])
+    plt.title('BIC score per model')
+    xpos = np.mod(bic.argmin(), len(n_components_range)) + .65 +\
+        .2 * np.floor(bic.argmin() / len(n_components_range))
+    plt.text(xpos, bic.min() * 0.97 + .03 * bic.max(), '*', fontsize=14)
+    spl.set_xlabel('Number of components')
+    spl.legend([b[0] for b in bars], cv_types)
+
+    # Plot the winner
+    splot = plt.subplot(2, 1, 2)
+    Y_ = clf.predict(df)
+    for i, (mean, cov, color) in enumerate(zip(clf.means_, clf.covariances_,
+                                               color_iter)):
+        v, w = linalg.eigh(cov)
+        if not np.any(Y_ == i):
+            continue
+        plt.scatter(df['x'][Y_ == i], df['y'][Y_ == i], .8, color=color)
+    
+        # Plot an ellipse to show the Gaussian component
+        angle = np.arctan2(w[0][1], w[0][0])
+        angle = 180. * angle / np.pi  # convert to degrees
+        v = 2. * np.sqrt(2.) * np.sqrt(v)
+        ell = mpl.patches.Ellipse(mean, v[0], v[1], 180. + angle, color=color)
+        ell.set_clip_box(splot.bbox)
+        ell.set_alpha(.5)
+        splot.add_artist(ell)
+
+    plt.xticks(())
+    plt.yticks(())
+    plt.title('Selected GMM: full model, 7 components')
+    plt.subplots_adjust(hspace=.35, bottom=.02)
     plt.show()
     
 def ehull_pred(train, pred):
@@ -260,10 +332,11 @@ if __name__ == "__main__":
     importance_matrics, importance_matrics_test = feature_selection(X_scale, y,X_scale_test, no_of_features)
     #feature_vs_acc(X_scale, X_scale_test, y, y_test, input_data)
     #dnn_result, model_accuracy=dnn(importance_matrics, importance_matrics_test, y, input_data)
-    rnn_lstm(importance_matrics,importance_matrics_test,y,input_data)
+    #rnn_lstm(importance_matrics,importance_matrics_test,y,input_data)
     Ehull_vs_Foreng(ye, yf)
     c_mean_cluster(ye, yf)
     c_mean_cluster_graph(ye,yf)
+    gmm_cluster(ye,yf)
     #confusion_matrix_result, accuracy, precision, recall, f1_score_result  = evaluation_metrics(dnn_result,y_test)
     
 
