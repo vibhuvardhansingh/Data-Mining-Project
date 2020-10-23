@@ -60,6 +60,7 @@ def data_conv(X_scale, X_scale_test, y):
 
 
 def dnn(X_train, X_test, Y, train_data):
+    
     x_scale, X_scale_test, y = data_conv(X_train, X_test, Y)
     model= Sequential()
     model.add(Dense(128, input_shape=(len(X_train.columns),), activation='relu'))
@@ -211,6 +212,7 @@ def c_mean_cluster(Ehull, Form_eng):
     ax2.plot(np.r_[2:11], fpcs)
     ax2.set_xlabel("Number of centers")
     ax2.set_ylabel("Fuzzy partition coefficient")
+    ax2.set_title('Fuzzy C-mean clustering algorithm')
 
     fig1.tight_layout()
     
@@ -295,6 +297,8 @@ def gmm_cluster(Ehull, Form_eng):
 
     plt.xticks(())
     plt.yticks(())
+    plt.xlabel('Stability (meV)')
+    plt.ylabel('Formation Energy (meV)')
     plt.title('Selected GMM: full model, 7 components')
     plt.subplots_adjust(hspace=.35, bottom=.02)
     plt.show()
@@ -309,6 +313,12 @@ def ehull_pred(train, pred):
 
     plt.show()
     
+def merging_test_train(X_scale, X_scale_test, y, y_test):
+    merged_dataset_x = pd.concat([X_scale,X_scale_test]).reset_index(drop=True)
+    merged_dataset_y = pd.concat([y,y_test]).reset_index(drop=True)
+    merged = pd.concat([merged_dataset_x,merged_dataset_y], axis = 1)
+    return merged_dataset_x, merged_dataset_y, merged
+    
 def rnn_lstm(X_train, X_test, Y, train_data):
     x_scale, X_scale_test, y = data_conv(X_train, X_test, Y)
     model= Sequential()
@@ -319,25 +329,31 @@ def rnn_lstm(X_train, X_test, Y, train_data):
     b=a[:,:,np.newaxis]
     #print(b.shape)
     
-    model.fit(b, np.array(y[:train_data]), epochs=15, batch_size=1000, verbose=1)
+    m = model.fit(b, np.array(y[:train_data]), epochs=15, batch_size=1000, verbose=1)
     loss,accuracy =model.evaluate(b, np.array(y[:train_data]))
     print(loss, accuracy*100)
+    a_test=np.array(X_scale_test[:train_data])
+    b_test=a_test[:,:,np.newaxis]
+    b_test = model.predict_classes(b_test)
+    return b_test ,accuracy
 
 
 if __name__ == "__main__":
 
     X_scale, X_scale_test, y, ye, yf, y_test, ye_test, yf_test, Xc, Xd = wrap_data()
+    merged_x, merged_y, merged = merging_test_train(X_scale, X_scale_test, y, y_test)
+    
     no_of_features = 40
     input_data = 250
-    importance_matrics, importance_matrics_test = feature_selection(X_scale, y,X_scale_test, no_of_features)
-    #feature_vs_acc(X_scale, X_scale_test, y, y_test, input_data)
-    #dnn_result, model_accuracy=dnn(importance_matrics, importance_matrics_test, y, input_data)
-    #rnn_lstm(importance_matrics,importance_matrics_test,y,input_data)
-    Ehull_vs_Foreng(ye, yf)
-    c_mean_cluster(ye, yf)
-    c_mean_cluster_graph(ye,yf)
-    gmm_cluster(ye,yf)
-    #confusion_matrix_result, accuracy, precision, recall, f1_score_result  = evaluation_metrics(dnn_result,y_test)
+    importance_matrics, importance_matrics_test = feature_selection(merged_x, merged_y,X_scale_test, no_of_features)
+    feature_vs_acc(X_scale, X_scale_test, y, y_test, input_data)
+    dnn_result, dnn_model_accuracy=dnn(importance_matrics, importance_matrics_test, y, input_data)
+    #rnn_result, accuracy = rnn_lstm(importance_matrics,importance_matrics_test,y,input_data)
+    #Ehull_vs_Foreng(ye, yf)
+    #c_mean_cluster(ye, yf)
+    #c_mean_cluster_graph(ye,yf)
+    #gmm_cluster(ye,yf)
+    #confusion_matrix_result, accuracy, precision, recall, f1_score_result  = evaluation_metrics(rnn_result,y_test)
     
 
 

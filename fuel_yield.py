@@ -104,11 +104,11 @@ plt.scatter(df['x'], df['y'], color=colors, alpha=0.5, edgecolor='k')
 for idx, centroid in enumerate(centroids):
     plt.scatter(*centroid, color=colmap[idx+1])
     
-#plt.title('K-means clustering algorithm')
-#plt.xlabel('Fuel yield in ml per gm')
-#plt.ylabel('Stability')
+plt.title('K-means clustering algorithm')
+plt.xlabel('Fuel yield in micro-mole per gm per cycle')
+plt.ylabel('Stability (meV)')
 
-#plt.show()
+plt.show()
 
 '''
 regressor = LinearRegression()
