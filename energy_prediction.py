@@ -13,7 +13,7 @@ from sklearn import mixture
 import itertools
 from scipy import linalg
 import matplotlib as mpl
-
+from sklearn.model_selection import train_test_split
 
 
 from keras.models import Sequential              #
@@ -60,7 +60,6 @@ def data_conv(X_scale, X_scale_test, y):
 
 
 def dnn(X_train, X_test, Y, train_data):
-    
     x_scale, X_scale_test, y = data_conv(X_train, X_test, Y)
     model= Sequential()
     model.add(Dense(128, input_shape=(len(X_train.columns),), activation='relu'))
@@ -337,23 +336,27 @@ def rnn_lstm(X_train, X_test, Y, train_data):
     b_test = model.predict_classes(b_test)
     return b_test ,accuracy
 
+def split_test_train(merged_x,merged_y):
+    X_scale, X_scale_test, y, y_test = train_test_split( merged_x,merged_y, test_size=0.25, random_state=45)
+    return X_scale, X_scale_test, y, y_test
 
 if __name__ == "__main__":
 
     X_scale, X_scale_test, y, ye, yf, y_test, ye_test, yf_test, Xc, Xd = wrap_data()
     merged_x, merged_y, merged = merging_test_train(X_scale, X_scale_test, y, y_test)
+    X_scale, X_scale_test, y, y_test = split_test_train(merged_x, merged_y)
     
     no_of_features = 40
-    input_data = 250
+    input_data = 486
     importance_matrics, importance_matrics_test = feature_selection(merged_x, merged_y,X_scale_test, no_of_features)
     feature_vs_acc(X_scale, X_scale_test, y, y_test, input_data)
-    dnn_result, dnn_model_accuracy=dnn(importance_matrics, importance_matrics_test, y, input_data)
-    #rnn_result, accuracy = rnn_lstm(importance_matrics,importance_matrics_test,y,input_data)
+    #dnn_result, dnn_model_accuracy=dnn(importance_matrics, importance_matrics_test, y, input_data)
+    rnn_result, accuracy = rnn_lstm(importance_matrics,importance_matrics_test,y,input_data)
     #Ehull_vs_Foreng(ye, yf)
     #c_mean_cluster(ye, yf)
     #c_mean_cluster_graph(ye,yf)
     #gmm_cluster(ye,yf)
-    #confusion_matrix_result, accuracy, precision, recall, f1_score_result  = evaluation_metrics(rnn_result,y_test)
+    confusion_matrix_result, accuracy, precision, recall, f1_score_result  = evaluation_metrics(rnn_result,y_test)
     
 
 
