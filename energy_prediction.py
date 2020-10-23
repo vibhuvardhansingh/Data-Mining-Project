@@ -59,7 +59,7 @@ def data_conv(X_scale, X_scale_test, y):
     return x_train, x_test, y1
 
 
-def dnn(X_train, X_test, Y, train_data):
+def dnn(X_train, X_test, Y):
     x_scale, X_scale_test, y = data_conv(X_train, X_test, Y)
     model= Sequential()
     model.add(Dense(128, input_shape=(len(X_train.columns),), activation='relu'))
@@ -69,10 +69,10 @@ def dnn(X_train, X_test, Y, train_data):
     model.add(Dense(1, activation='relu'))
     #model.summary()
     model.compile(loss='binary_crossentropy', optimizer="adam", metrics=['accuracy'])
-    model.fit(np.array(x_scale[:train_data]), np.array(y[:train_data]), epochs=100, batch_size=10, verbose=1)
-    loss,accuracy =model.evaluate(np.array(x_scale[:train_data]), np.array(y[:train_data]))
+    model.fit(np.array(x_scale), np.array(y), epochs=100, batch_size=10, verbose=1)
+    loss,accuracy =model.evaluate(np.array(x_scale), np.array(y))
     print(loss, accuracy*100)
-    result=model.predict_classes(np.array(X_scale_test[:train_data]))
+    result=model.predict_classes(np.array(X_scale_test))
     #result= pd.Dataframe(dnn_predict, columns=['dnn prediction'])
     return result, accuracy
 
@@ -122,14 +122,14 @@ def feature_selection(X_train, Y_train,X_test, no_of_features):
     features = np.array((importance_matrics[:no_of_features]['features'].index).tolist())
     return X_train.iloc[:,features], X_test.iloc[:,features]
 
-def feature_vs_acc(X_train, X_test, y, y_test, no_of_units):
+def feature_vs_acc(X_train, X_test, y, y_test):
     X = []
     Y = []
     Z = []
     j = [10,20,30,40,50,60,70,80,90,100]
     for i in j:
         importance_x, importance_x_test = feature_selection(X_train, y,X_test, i)
-        result, model_accuracy = dnn(importance_x, importance_x_test, y, no_of_units)
+        result, model_accuracy = dnn(importance_x, importance_x_test, y)
         confusion_matrix_result, accuracy, precision, recall, f1_score_result  = evaluation_metrics(result,y_test)
         X.append(i)
         Y.append(model_accuracy)
@@ -318,46 +318,46 @@ def merging_test_train(X_scale, X_scale_test, y, y_test):
     merged = pd.concat([merged_dataset_x,merged_dataset_y], axis = 1)
     return merged_dataset_x, merged_dataset_y, merged
     
-def rnn_lstm(X_train, X_test, Y, train_data):
+def rnn_lstm(X_train, X_test, Y):
     x_scale, X_scale_test, y = data_conv(X_train, X_test, Y)
     model= Sequential()
     model.add(LSTM(40, input_shape=(len(X_train.columns),1),activation='relu',return_sequences=False))
     model.add(Dense(1, activation='sigmoid'))
     model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
-    a=np.array(x_scale[:train_data])
+    a=np.array(x_scale)
     b=a[:,:,np.newaxis]
     #print(b.shape)
     
-    m = model.fit(b, np.array(y[:train_data]), epochs=15, batch_size=1000, verbose=1)
-    loss,accuracy =model.evaluate(b, np.array(y[:train_data]))
+    m = model.fit(b, np.array(y), epochs=15, batch_size=1000, verbose=1)
+    loss,accuracy =model.evaluate(b, np.array(y))
     print(loss, accuracy*100)
-    a_test=np.array(X_scale_test[:train_data])
+    a_test=np.array(X_scale_test)
     b_test=a_test[:,:,np.newaxis]
     b_test = model.predict_classes(b_test)
     return b_test ,accuracy
 
-def split_test_train(merged_x,merged_y):
-    X_scale, X_scale_test, y, y_test = train_test_split( merged_x,merged_y, test_size=0.25, random_state=45)
+def split_test_train(merged_x,merged_y,test_size):
+    X_scale, X_scale_test, y, y_test = train_test_split(merged_x,merged_y, test_size=test_size, random_state=45)
     return X_scale, X_scale_test, y, y_test
 
 if __name__ == "__main__":
 
     X_scale, X_scale_test, y, ye, yf, y_test, ye_test, yf_test, Xc, Xd = wrap_data()
     merged_x, merged_y, merged = merging_test_train(X_scale, X_scale_test, y, y_test)
-    X_scale, X_scale_test, y, y_test = split_test_train(merged_x, merged_y)
-    
     no_of_features = 40
-    input_data = 486
-    importance_matrics, importance_matrics_test = feature_selection(merged_x, merged_y,X_scale_test, no_of_features)
-    feature_vs_acc(X_scale, X_scale_test, y, y_test, input_data)
-    #dnn_result, dnn_model_accuracy=dnn(importance_matrics, importance_matrics_test, y, input_data)
-    rnn_result, accuracy = rnn_lstm(importance_matrics,importance_matrics_test,y,input_data)
+    test_size = 0.25 # test size in percent
+    X_scale, X_scale_test, y, y_test = split_test_train(merged_x, merged_y, test_size)
+    importance_matrics, importance_matrics_test = feature_selection(X_scale, y,X_scale_test, no_of_features)
+    #feature_vs_acc(X_scale, X_scale_test, y, y_test)
+    #dnn_result, dnn_model_accuracy=dnn(importance_matrics, importance_matrics_test, y)
+    rnn_result, accuracy = rnn_lstm(importance_matrics,importance_matrics_test,y)
     #Ehull_vs_Foreng(ye, yf)
     #c_mean_cluster(ye, yf)
     #c_mean_cluster_graph(ye,yf)
     #gmm_cluster(ye,yf)
-    confusion_matrix_result, accuracy, precision, recall, f1_score_result  = evaluation_metrics(rnn_result,y_test)
-    
+    #confusion_matrix_result_dnn, accuracy_dnn, precision_dnn, recall_dnn, f1_score_result_dnn  = evaluation_metrics(dnn_result,y_test)
+    confusion_matrix_result_rnn, accuracy_rnn, precision_rnn, recall_rnn, f1_score_result_rnn  = evaluation_metrics(rnn_result,y_test)
+
 
 
 
