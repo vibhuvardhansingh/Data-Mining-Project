@@ -122,7 +122,7 @@ def feature_selection(X_train, Y_train,X_test, no_of_features):
     features = np.array((importance_matrics[:no_of_features]['features'].index).tolist())
     return X_train.iloc[:,features], X_test.iloc[:,features]
 
-def feature_vs_acc(X_train, X_test, y, y_test):
+def feature_vs_acc_dnn(X_train, X_test, y, y_test):
     X = []
     Y = []
     Z = []
@@ -148,7 +148,35 @@ def feature_vs_acc(X_train, X_test, y, y_test):
     #plt.plot(df['x'],df['z'])
 
     return 
+
+def feature_vs_acc_rnn(X_train, X_test, y, y_test):
+    X = []
+    Y = []
+    Z = []
+    j = [10,20,30,40,50,60,70,80,90,100]
+    for i in j:
+        importance_x, importance_x_test = feature_selection(X_train, y,X_test, i)
+        result, model_accuracy = rnn_lstm(importance_x, importance_x_test, y)
+        confusion_matrix_result, accuracy, precision, recall, f1_score_result  = evaluation_metrics(result,y_test)
+        X.append(i)
+        Y.append(model_accuracy)
+        Z.append(accuracy)
+        
+    df = pd.DataFrame({
+        'x':X,
+        'y':Y,
+        'z':Z})
     
+    ax = plt.axes(projection='3d')
+    ax.scatter3D(df['x'], df['y'], df['z']);
+    ax.set_xlabel('No. of features')
+    ax.set_ylabel('Model Accuracy')
+    ax.set_title('Test Acc vs Model Acc vs No. of features')
+
+    #plt.plot(df['x'],df['y'])
+    #plt.plot(df['x'],df['z'])
+
+    return 
     
 def Ehull_vs_Foreng(Ehull, Form_eng):
     df = pd.DataFrame({
@@ -345,18 +373,19 @@ if __name__ == "__main__":
     X_scale, X_scale_test, y, ye, yf, y_test, ye_test, yf_test, Xc, Xd = wrap_data()
     merged_x, merged_y, merged = merging_test_train(X_scale, X_scale_test, y, y_test)
     no_of_features = 40
-    test_size = 0.25 # test size in percent
+    test_size = 0.95 # test size in percent
     X_scale, X_scale_test, y, y_test = split_test_train(merged_x, merged_y, test_size)
     importance_matrics, importance_matrics_test = feature_selection(X_scale, y,X_scale_test, no_of_features)
-    #feature_vs_acc(X_scale, X_scale_test, y, y_test)
+    #feature_vs_acc_dnn(X_scale, X_scale_test, y, y_test)
+    feature_vs_acc_rnn(X_scale, X_scale_test, y, y_test)
     #dnn_result, dnn_model_accuracy=dnn(importance_matrics, importance_matrics_test, y)
-    rnn_result, accuracy = rnn_lstm(importance_matrics,importance_matrics_test,y)
+    #rnn_result, accuracy = rnn_lstm(importance_matrics,importance_matrics_test,y)
     #Ehull_vs_Foreng(ye, yf)
     #c_mean_cluster(ye, yf)
     #c_mean_cluster_graph(ye,yf)
     #gmm_cluster(ye,yf)
     #confusion_matrix_result_dnn, accuracy_dnn, precision_dnn, recall_dnn, f1_score_result_dnn  = evaluation_metrics(dnn_result,y_test)
-    confusion_matrix_result_rnn, accuracy_rnn, precision_rnn, recall_rnn, f1_score_result_rnn  = evaluation_metrics(rnn_result,y_test)
+    #confusion_matrix_result_rnn, accuracy_rnn, precision_rnn, recall_rnn, f1_score_result_rnn  = evaluation_metrics(rnn_result,y_test)
 
 
 
