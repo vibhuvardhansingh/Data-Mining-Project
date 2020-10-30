@@ -122,7 +122,7 @@ def feature_selection(X_train, Y_train,X_test, no_of_features):
     features = np.array((importance_matrics[:no_of_features]['features'].index).tolist())
     return X_train.iloc[:,features], X_test.iloc[:,features]
 
-def feature_vs_acc_dnn(X_train, X_test, y, y_test):
+def feature_vs_acc_dnn(X_train, X_test, y, y_test, test_size):
     X = []
     Y = []
     Z = []
@@ -144,7 +144,7 @@ def feature_vs_acc_dnn(X_train, X_test, y, y_test):
     ax.scatter3D(df['x'], df['y'], df['z']);
     ax.set_xlabel('No. of features')
     ax.set_ylabel('Model Accuracy')
-    ax.set_title('Test Acc. vs Model Acc. vs No. of features')
+    ax.set_title('Test Acc. vs Model Acc. vs No. of features for DNN test size %:'+test_size)
 
 
     #plt.plot(df['x'],df['y'])
@@ -152,7 +152,7 @@ def feature_vs_acc_dnn(X_train, X_test, y, y_test):
 
     return 
 
-def feature_vs_acc_rnn(X_train, X_test, y, y_test):
+def feature_vs_acc_rnn(X_train, X_test, y, y_test, test_size):
     X = []
     Y = []
     Z = []
@@ -174,7 +174,7 @@ def feature_vs_acc_rnn(X_train, X_test, y, y_test):
     ax.scatter3D(df['x'], df['y'], df['z']);
     ax.set_xlabel('No. of features')
     ax.set_ylabel('Model Accuracy')
-    ax.set_title('Test Acc. vs Model Acc. vs No. of features')
+    ax.set_title('Test Acc. vs Model Acc. vs No. of features for RNN test size %:'+test_size)
 
     #plt.plot(df['x'],df['y'])
     #plt.plot(df['x'],df['z'])
@@ -382,8 +382,8 @@ if __name__ == "__main__":
     test_size = 0.35 # test size in percent
     X_scale, X_scale_test, y, y_test = split_test_train(merged_x, merged_y, test_size)
     importance_matrics, importance_matrics_test = feature_selection(X_scale, y,X_scale_test, no_of_features)
-    #feature_vs_acc_dnn(X_scale, X_scale_test, y, y_test)
-    #feature_vs_acc_rnn(X_scale, X_scale_test, y, y_test)
+    feature_vs_acc_dnn(X_scale, X_scale_test, y, y_test, str(test_size*100))
+    #feature_vs_acc_rnn(X_scale, X_scale_test, y, y_test, str(test_size*100))
     #dnn_result, dnn_model_accuracy=dnn(importance_matrics, importance_matrics_test, y)
     #rnn_result, accuracy = rnn_lstm(importance_matrics,importance_matrics_test,y)
     #Ehull_vs_Foreng(ye, yf)
