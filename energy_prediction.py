@@ -3,7 +3,7 @@ import pandas as pd
 from sklearn.ensemble import ExtraTreesClassifier
 from sklearn.feature_selection import VarianceThreshold
 from sklearn import preprocessing
-from sklearn.metrics import confusion_matrix, accuracy_score, precision_score, f1_score, recall_score
+from sklearn.metrics import confusion_matrix, accuracy_score, precision_score, f1_score, recall_score, roc_curve, roc_auc_score
 import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
 import skfuzzy as fuzz
@@ -14,7 +14,8 @@ import itertools
 from scipy import linalg
 import matplotlib as mpl
 from sklearn.model_selection import train_test_split
-
+from sklearn.utils import resample
+from keras.optimizers import Adam
 
 from keras.models import Sequential              #
 from keras.layers import Dense, Dropout, LSTM    #
@@ -62,14 +63,16 @@ def data_conv(X_scale, X_scale_test, y):
 def dnn(X_train, X_test, Y):
     x_scale, X_scale_test, y = data_conv(X_train, X_test, Y)
     model= Sequential()
-    model.add(Dense(128, input_shape=(len(X_train.columns),), activation='relu'))
+    model.add(Dense(len(X_train.columns), input_shape=(len(X_train.columns),), activation='relu'))
     model.add(Dropout(0.5))
     model.add(Dense(64, activation='relu'))
     model.add(Dropout(0.5))
+    model.add(Dense(len(X_train.columns), activation='relu'))
+    model.add(Dropout(0.5))
     model.add(Dense(1, activation='relu'))
     #model.summary()
-    model.compile(loss='binary_crossentropy', optimizer="adam", metrics=['accuracy'])
-    model.fit(np.array(x_scale), np.array(y), epochs=100, batch_size=10, verbose=1)
+    model.compile(loss='binary_crossentropy', optimizer=Adam(lr=0.001), metrics=['accuracy'])
+    model.fit(np.array(x_scale), np.array(y), epochs=250, batch_size=10, verbose=1)
     loss,accuracy =model.evaluate(np.array(x_scale), np.array(y))
     print(loss, accuracy*100)
     result=model.predict_classes(np.array(X_scale_test))
@@ -355,14 +358,14 @@ def merging_test_train(X_scale, X_scale_test, y, y_test):
 def rnn_lstm(X_train, X_test, Y):
     x_scale, X_scale_test, y = data_conv(X_train, X_test, Y)
     model= Sequential()
-    model.add(LSTM(40, input_shape=(len(X_train.columns),1),activation='relu',return_sequences=False))
+    model.add(LSTM(len(X_train.columns), input_shape=(len(X_train.columns),1),activation='relu',return_sequences=False))
     model.add(Dense(1, activation='sigmoid'))
     model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
     a=np.array(x_scale)
     b=a[:,:,np.newaxis]
     #print(b.shape)
     
-    m = model.fit(b, np.array(y), epochs=15, batch_size=1000, verbose=1)
+    m = model.fit(b, np.array(y), epochs=150, batch_size=15, verbose=1)
     loss,accuracy =model.evaluate(b, np.array(y))
     print(loss, accuracy*100)
     a_test=np.array(X_scale_test)
@@ -372,7 +375,60 @@ def rnn_lstm(X_train, X_test, Y):
 
 def split_test_train(merged_x,merged_y,test_size):
     X_scale, X_scale_test, y, y_test = train_test_split(merged_x,merged_y, test_size=test_size, random_state=45)
-    return X_scale, X_scale_test, y, y_test
+    #combine them back for resampling
+    train_data = pd.concat([X_scale, y], axis=1)
+    
+    # separate minority and majority classes
+    negative = train_data[train_data.EnergyAboveHull==0]
+    positive = train_data[train_data.EnergyAboveHull==1]
+    
+    # upsample minority
+    pos_upsampled = resample(positive,
+    replace=True, # sample with replacement
+    n_samples=len(negative), # match number in majority class
+    random_state=27) # reproducible results
+    
+    # combine majority and upsampled minority
+    upsampled_training = pd.concat([negative, pos_upsampled])
+    
+    #combine them back for resampling
+    test_data = pd.concat([X_scale_test, y_test], axis=1)
+    
+    negative_test = test_data[test_data.EnergyAboveHull==0]
+    positive_test = test_data[test_data.EnergyAboveHull==1]
+    
+    pos_upsampled_test = resample(positive_test,
+    replace=True,
+    n_samples=len(negative_test), 
+    random_state=27) 
+    
+    upsampled_test = pd.concat([negative_test, pos_upsampled_test])
+        
+    return upsampled_training.drop(['EnergyAboveHull'],axis = 1), upsampled_test.drop(['EnergyAboveHull'],axis = 1),upsampled_training[upsampled_training.columns[-1]] , upsampled_test[upsampled_test.columns[-1]]
+
+def roc_curve_dnn(dnn_result, y_test):
+    fpr, tpr, thresholds = roc_curve(y_test, dnn_result, pos_label=1)
+    
+    auc = roc_auc_score(y_test, dnn_result)
+    
+    fig, ax = plt.subplots()
+    ax.plot(fpr, tpr)
+    ax.plot([0, 1], [0, 1], color='navy', linestyle='--', label='random')
+    plt.title(f'AUC: {auc} DNN')
+    ax.set_xlabel('False positive rate')
+    ax.set_ylabel('True positive rate')
+    
+def roc_curve_rnn(rnn_result, y_test):
+    fpr, tpr, thresholds = roc_curve(y_test, rnn_result, pos_label=1)
+    
+    auc = roc_auc_score(y_test, rnn_result)
+    
+    fig, ax = plt.subplots()
+    ax.plot(fpr, tpr)
+    ax.plot([0, 1], [0, 1], color='navy', linestyle='--', label='random')
+    plt.title(f'AUC: {auc} RNN')
+    ax.set_xlabel('False positive rate')
+    ax.set_ylabel('True positive rate')
 
 if __name__ == "__main__":
 
@@ -382,18 +438,19 @@ if __name__ == "__main__":
     test_size = 0.35 # test size in percent
     X_scale, X_scale_test, y, y_test = split_test_train(merged_x, merged_y, test_size)
     importance_matrics, importance_matrics_test = feature_selection(X_scale, y,X_scale_test, no_of_features)
-    feature_vs_acc_dnn(X_scale, X_scale_test, y, y_test, str(test_size*100))
+    #feature_vs_acc_dnn(X_scale, X_scale_test, y, y_test, str(test_size*100))
     #feature_vs_acc_rnn(X_scale, X_scale_test, y, y_test, str(test_size*100))
     #dnn_result, dnn_model_accuracy=dnn(importance_matrics, importance_matrics_test, y)
-    #rnn_result, accuracy = rnn_lstm(importance_matrics,importance_matrics_test,y)
+    rnn_result, accuracy = rnn_lstm(importance_matrics,importance_matrics_test,y)
     #Ehull_vs_Foreng(ye, yf)
     #c_mean_cluster(ye, yf)
     #c_mean_cluster_graph(ye,yf)
     #gmm_cluster(ye,yf)
     #ehull_pred(ye, yf)
     #confusion_matrix_result_dnn, accuracy_dnn, precision_dnn, recall_dnn, f1_score_result_dnn  = evaluation_metrics(dnn_result,y_test)
-    #confusion_matrix_result_rnn, accuracy_rnn, precision_rnn, recall_rnn, f1_score_result_rnn  = evaluation_metrics(rnn_result,y_test)
-
+    confusion_matrix_result_rnn, accuracy_rnn, precision_rnn, recall_rnn, f1_score_result_rnn  = evaluation_metrics(rnn_result,y_test)
+    #roc_curve_dnn(dnn_result,y_test)
+    #roc_curve_rnn(rnn_result,y_test)
 
 
 
