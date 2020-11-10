@@ -414,11 +414,11 @@ def roc_curve_dnn(dnn_result, y_test, test_size, no_of_features):
     fig, ax = plt.subplots()
     ax.plot(fpr, tpr)
     ax.plot([0, 1], [0, 1], color='navy', linestyle='--', label='random')
-    plt.title(f'AUC: {auc} DNN test size : {test_size}, no. of features : {no_of_features}')
+    plt.title(f'AUC: {auc} DNN test size ratio : {test_size}, no. of features : {no_of_features}')
     ax.set_xlabel('False positive rate')
     ax.set_ylabel('True positive rate')
     
-def roc_curve_rnn(rnn_result, y_test):
+def roc_curve_rnn(rnn_result, y_test, test_size, no_of_features):
     fpr, tpr, thresholds = roc_curve(y_test, rnn_result, pos_label=1)
     
     auc = roc_auc_score(y_test, rnn_result)
@@ -426,7 +426,7 @@ def roc_curve_rnn(rnn_result, y_test):
     fig, ax = plt.subplots()
     ax.plot(fpr, tpr)
     ax.plot([0, 1], [0, 1], color='navy', linestyle='--', label='random')
-    plt.title(f'AUC: {auc} RNN')
+    plt.title(f'AUC: {auc} RNN test size ratio : {test_size}, no. of features : {no_of_features}')
     ax.set_xlabel('False positive rate')
     ax.set_ylabel('True positive rate')
 
@@ -440,8 +440,8 @@ if __name__ == "__main__":
     importance_matrics, importance_matrics_test = feature_selection(X_scale, y,X_scale_test, no_of_features)
     #feature_vs_acc_dnn(X_scale, X_scale_test, y, y_test, str(test_size*100))
     #feature_vs_acc_rnn(X_scale, X_scale_test, y, y_test, str(test_size*100))
-    dnn_result, dnn_model_accuracy=dnn(importance_matrics, importance_matrics_test, y)
-    #rnn_result, accuracy = rnn_lstm(importance_matrics,importance_matrics_test,y)
+    #dnn_result, dnn_model_accuracy=dnn(importance_matrics, importance_matrics_test, y)
+    rnn_result, accuracy = rnn_lstm(importance_matrics,importance_matrics_test,y)
     #Ehull_vs_Foreng(ye, yf)
     #c_mean_cluster(ye, yf)
     #c_mean_cluster_graph(ye,yf)
@@ -449,8 +449,8 @@ if __name__ == "__main__":
     #ehull_pred(ye, yf)
     #confusion_matrix_result_dnn, accuracy_dnn, precision_dnn, recall_dnn, f1_score_result_dnn  = evaluation_metrics(dnn_result,y_test)
     #confusion_matrix_result_rnn, accuracy_rnn, precision_rnn, recall_rnn, f1_score_result_rnn  = evaluation_metrics(rnn_result,y_test)
-    roc_curve_dnn(dnn_result,y_test, test_size, no_of_features)
-    #roc_curve_rnn(rnn_result,y_test)
+    #roc_curve_dnn(dnn_result,y_test, test_size, no_of_features)
+    roc_curve_rnn(rnn_result,y_test, test_size, no_of_features)
 
 
 
